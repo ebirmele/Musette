@@ -1,0 +1,242 @@
+---
+title: "How to use the Musette package"
+author: "Jennifer Wong, Thomas Picchetti, Francois Radvanyi and Etienne Birmele"
+date: "17/02/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installation
+
+
+To install Musette, load the package as a zip file at https://git.mi.parisdescartes.fr/ebirmele/Musette
+and install it locally
+
+```{r, eval=FALSE}
+install.packages("./Musette-master.zip", repos=NULL,type="source")
+```
+
+It can now be loaded for use
+
+```{r}
+library(musette)
+```
+
+
+## Algorithm description
+
+### General aim
+
+The user chooses among the data a subset of tumors which are called 'red'
+ and another, disjoint subset of 'blue' tumors. A good solution $S$ is a set
+ of alterations $(A_1,A_2,...A_n)$ such that : 
+\begin{enumerate}
+\item  many of the red tumors are affected by at least one of $A_1,\ldots,A_n$. 
+\item  few blue tumors are affected by any of $A_1,\ldots,A_n$. 
+\item  the number n of alterations in $S$ is kept small.
+\end{enumerate}
+
+A score is defined for any set $S$ of alterations by
+
+$$  c(S) =  - \frac{d_R(S)}{N_R} \log p_h(S) $$
+where $p_h(S)$ denotes the hypergeometric p-value, $d_R(S)$ the number of red samples hit by $S$ and $N_R$ the number of red samples. The score takes both into account the goals of hitting
+essentially red samples (through the hypergeometric score) and as a high number of them (through $\frac{d_R(S)}{N_R}$). 
+ 
+The aim of the algorithm is to enumerate the best alteration sets. 
+ 
+ 
+### Preprocessing
+
+A data frame is constructed containing information about the alterations. Some are mandatory (name, number of blue/red neighbours), others are optional (alteration type, gene, chromosome location, etc).
+
+
+For some alteration types (e.g. deletions and amplifications)
+which often act on a whole chromosome segment, we define two notions of
+domination in order to concentrate the whole segment into one alteration.
+ 
+Consider two alterations $A$ and $B$ which are close enough on the genome, and such that $A$ concerns more tumors than $B$, including a sufficient percentage (blind_percent) of the tumors touched by $B$. Then $A$ is said to *dominate* $B$ in the color-blind way.
+Blind domination is computed for alterations of
+the same type, for the types listed in 'blind_domination_step'. The set of considered alterations is reduced to a set of blind-leader alterations, that is a set such each alteration A is dominated by a some alteration, which is dominated by some alteration, ... in a chain 
+leading to some blind-leader alteration. Only the leaders are kept to run the main algorithm.
+ 
+
+If $A$ and $B$ are close enough, $A$ has a better score than $B$, touching a sufficient fraction of red tumors touched by $B$, and if a sufficient fraction of blue tumors touched by $A$ are also touched by $B$, then $A$ dominates $B$ in the color-aware way. The number of considered alterations is again reduced, in a similar manner to the blind domination, to a set of color_leaders. Only those are kept for the remaining steps of the analysis.
+In order to be able to get back to the original alterations, a list is created for every color-leader gene A, containing the list of the alterations which color_leader is A.
+
+### Enumeration algorithm
+
+A tree of solutions (sets of alterations) is generated from a root which is the empty set. Every other solution $S$ is the child of a solution $S'$ having one less alteration. The child $S$ is constructed and generated only if its score $c(S)$ is significantly better than its parents'. This is evaluated by computing a 'step score', which can be defined as : 
+\begin{itemize}
+\item *original* mode : the probability of getting a better score than $c(S)$ by adding a random alteration to $S'$. 
+\item *best-first* mode : the probability of getting a better score than $c(S)$ by replacing the 'worst' alteration in $S$ by a random alteration (here 'worst' is in terms of the score of the individual alteration) 
+\item *strict* mode : the highest of the $p_i$, where $p_i$ is the probability of getting a better score than $c(S)$ by replacing alteration number $i$ in $S$ by a random alteration. The solution $S$ is added to the tree only if this step-score is below a certain threshold.  The tree of solutions is grown by gradually raising this threshold.
+
+
+ 
+### Outcome
+
+The solutions are displayed in a data frame which columns include the alterations included each solution, its specificity and sensitivity in terms of covering of the red tumors or the fact that it can be extended or not to a better solution.
+ 
+
+
+## An example
+
+
+### Data and parameter preparation 
+
+We consider the *tcga_bladder* data present in the package, which was downloaded from the TCGA database. 
+
+It contains an object *matrices*, which is composed of three booelan matrices *matrices$muta*, *matrices$dele* and *matrices$ampli* which respectively indicate which mutations (among $16305$), deletions (among $15063$) and amplifications (among $20695$) occur in $388$ samples.   
+
+It also contains information on the chromosome and position of those alterations, as well as the known pathways for the corresponding genes.
+
+```{r,message=FALSE}
+library(ComplexHeatmap)
+data("tcga_bladder",package="musette")
+```
+
+
+The first (mandatory) step to define which sub-family of samples one wants to characterize. By analogy with the summary Figure, those samples are called *reds* whereas all samples are called *blues*.
+
+Let us here define the reds as the *basal* samples. The aim of that run will thus be to identify alteration sets characterizing basal samples with respect to all the other types.
+
+```{r}
+reds= (groups == 'basal')
+names(reds)=names(groups)
+blues=!reds
+names(blues)=names(groups)
+```
+
+
+Some other parameters to set are the number of solutions to generate and the mode of alteration sets generation (see [] for a description of the different choices)
+
+```{r}
+bound=100  #number of solutions to generate
+stepmode="strict"
+```
+
+
+
+Two pre-processing steps of domination can be run in order to decrease the number of considered alterations and thus the size of the combination space to explore.  
+
+The blind domination merges two alterations if they share mainly the same neighborhood.  It requires to specify the type of alterations it concerns, as well as the minimum percentage of common neighbors and maximal distance in the genome to define a domination between two alterations.
+
+Consider two deletions $d_1$ and $d_2$,  close on the genome and such that in at least $90%$ of the cases where $d_2$ is effective, $d_1$ is also. Than $d_2$ can be considered as a side-effect of $d_1$ as deletions biologically concern whole regions. From an combinatorial point of view, $d_2$ is than suppressed from the instance and hidden behind $d_1$ (the list of alterations hidden behind the master alterations is kept in memory for final biological analysis) 
+
+```{r}
+blind_domination_step=c("ampli","dele") # alteration types  to be considered for the "blind" domination step
+blind_percent=90  #  required percentage for the "blind" domination step
+blind_distance=5000000 # maximal distance at which an alteration can blind-dominate another one
+```
+
+
+The color domination is identical but by with a possibility of distinction between the blue and red percentages.
+
+
+```{r}
+color_domination_step=c("ampli","dele") # same parameters for the "colored" domination.
+red_percent=80  # two percentages (red and blue) have to be defined
+blue_percent=80
+color_distance=5000000
+```
+
+
+### musette algorithm
+
+The main algorithm can now be run
+
+```{r}
+ll=do.musette(matrices=matrices, reds=reds, blind_domination_step = blind_domination_step,
+              color_domination_step = color_domination_step, blind_distance=blind_distance, 
+              color_distance=color_distance, blind_percent=blind_percent, red_percent=red_percent, 
+              blue_percent=blue_percent, chromosome = chromosome, longname=longname,
+              pathways=pathways,position=position, bound=bound)
+```
+
+Note that the *chromosome*, *longname* and *pathways* arguments are not mandatory.
+
+
+
+The output contains two objects, best explored with the *View()* function:
+
+```{r}
+solutions=ll$solutions           
+#View(solutions)
+alterations=ll$alterations
+#View(alterations)
+```
+
+The solution array lists the explored alteration sets with the following items for each:
+
+- its number of red and blue neighbors and associated score 
+- the stepscore needed to explore it
+- its sensitivity and specificity to discriminate red samples
+- the list of all alterations, including those hidden behind the selected ones
+
+The alterations array lists all aterations with the following items:
+
+- the alterations hidden behind them or the alterations it is hidden behind
+- the pathways it belongs to 
+- its full name (*longname*), chromosome and position 
+
+
+### Post-treatment
+
+
+## Graph Visualization
+
+It is possible to visualize the graph of all alterations present in the top solutions. The node sizes are proportional to the sum of scores of the solutions an alteration belongs to, the edge width are proportional to the sum of scores of the solutions a pair has in common. The notion of alteration set is lost in that  representation but it allows a quick glance into the results in terms of main alterations. 
+
+The plot is interactive, meaning that the nodes can be moved for a better visualization and some information on the alterations is given when pointing on them. The following code generates a plot using the $20$ best alteration sets of the example:
+
+```{r,eval=FALSE}
+g <- influenceGraph(ll,20,TRUE)
+visIgraph(g)
+```
+
+The plot is not drawn here as the interactive format of visIgraph plots is not compatible 
+
+Other useful plots are the oncoplots generated with the *oncoPrint* function of the *ComplexHeatmap* package. Each such plot corresponds to a solution set and gives a readable summary of the considered alterations and the red and blue samples hit by each alteration.
+
+The following code shows such plots fro the $3$ best solutions in terms od score.
+
+```{r, message=FALSE}
+indices <- rownames(solutions)[1:3]
+```
+
+
+```{r, message=FALSE}
+for (index in indices){
+   solution.oncomatrix(ll,index,reds)
+}  
+```
+
+
+## Pathway enrichment of solutions
+
+It may be interesting from an interpretation point of view which pathways appear to contain several altered genes in the solutions. The *sharedPathway* function generates a dataframe 
+with one line per (solution,pathway) couple for which the pathway appears at least twice in the list of concerned genes. This dataframe also contains the list of all concerned genes and their red and blue neighbors.
+
+```{r}
+spdf = sharedPathways(solutions,alterations)
+View(spdf)
+```
+
+
+## Export in csv files
+
+The dataframes containing the alterations, the solutions or the shared pathways have a format
+which is not compatible with the *write.csv* function. To obtain correctly files csv files, use the *musette2csv* function before using it.
+
+```{r,eval=FALSE}
+# Data export to csv files
+csv_sol=musette2csv(sol)
+write.csv(csv_sol,file="mysolutions.csv")
+```
+
+
+
+
