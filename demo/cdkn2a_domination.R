@@ -45,27 +45,27 @@ alterations=ll$alterations  # dataframe of the alterations considered to generat
 
 
 
-## liste des altérations dominées (au sens large) par CDKN2A
+## alterations dominated by CDKN2A
 
 dominated <- alterations[which(alterations$name=="dele_CDKN2A"),]$followers$dele_CDKN2A
 
-## vérification qu'ils sont tous sur le même chromosome: réponse oui
+## check if all on the same chromosome
 #sum(alterations[which(alterations$name%in%dominated),]$chromosome==9)
 #length(dominated)
 
-## où sont-ils: entre 17 319 452   et  35 923 318
+## where: between 17 319 452 and  35 923 318
 #dominated_positions <- unlist(alterations[which(alterations$name%in%dominated),]$position)
 #min(dominated_positions)
 #max(dominated_positions)
 
 
-## création d'un tibble qui contient les infos sur les deletions du chromosome 9
+## tibble with info on deletions on chromosome 9
 
-# on ne garde que les deletions 
+# only deletions
 single_alterations <- alterations[grepl("dele",alterations$name),] 
 
-#puis que celles sur le chromosome 9 entre 10 000 000 et 50 000 000,
-# et on ajoute une variable disant si la deletion est dominée par cdkn2a
+#on chromosome 9 from position 10 000 000 to 50 000 000,
+# and variable telling if deletions are dominated by cdkn2a
 cdkdata <- tibble(name = unlist(single_alterations$name),chromosome=unlist(single_alterations$chromosome),position=unlist(single_alterations$position)) %>%
             filter(chromosome==9) %>% 
             #filter(position>10000000) %>%
@@ -73,8 +73,8 @@ cdkdata <- tibble(name = unlist(single_alterations$name),chromosome=unlist(singl
             mutate(dominated= name %in% dominated)
 
 
-## ajout du nombre d'évhantillons pour lesquels chaque deletion est présente,
-## en séparant celles où cdkn2a est aussi délété
+## addition of the sample count where each deletion takes place,
+## couting also apart the ones for which cdkn2a is deleted
 
 ref_deletions <- matrices$dele[which(rownames(matrices$dele)=="CDKN2A"),]
 common_deletions <- c()
@@ -88,7 +88,8 @@ for (i in 1:length(cdkdata$name)){
   specific_deletions <- c(specific_deletions,sum(!ref_deletions & alt_deletions))
 }
 
-#position de cdkn2a et des zones pour dles dominés
+
+#position of cdkn2a 
 cdkn2aposition <- cdkdata$position[cdkdata$name=="dele_CDKN2A"]
 
 rect1min <- mean(c(cdkdata$position[61],cdkdata$position[62]))
