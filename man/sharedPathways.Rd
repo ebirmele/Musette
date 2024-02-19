@@ -17,7 +17,7 @@ that at least two alterations do concern genes belonging to the pathway.
 Columns include :
 \itemize{
 \item sol: identification number of the solution in the \code{solutions} dataframe
-\item alterations describing of the solution 
+\item alterations describing the solution 
 \item pathway
 \item gene: alterations of the solution (including those dominated by the descriptors) that belong to the pathway
 \item leader: leaders of the alterations in the gene list
