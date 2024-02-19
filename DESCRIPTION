@@ -5,7 +5,7 @@ Version: 0.27
 Date: 2019-5-16
 Author: Thomas Picchetti
 Maintainer: Thomas Picchetti <thomas.picchetti@gmail.com>
-Description: "Temp. removed dependencies : S4Vectors, KEGG.db. Developed with cancer applications in mind, but can have other uses.\cr With a dataset consisting of samples, each of which is affected by several alterations (e.g. gene mutations, gene amplifications, gene deletions), the user provides a partition of the samples into two groups (e.g. invasive tumor vs not invasive), and the program then enumerates sets of alterations significantly linked with the first group (a set of alterations is considered "linked" to the first group if this group is over-represented amongst the samples that have at least an alteration of this set)."
+Description: "Developed with cancer applications in mind, but can have other uses.\cr With a dataset consisting of samples, each of which is affected by several alterations (e.g. gene mutations, gene amplifications, gene deletions), the user provides a partition of the samples into two groups (e.g. invasive tumor vs not invasive), and the program then enumerates sets of alterations significantly linked with the first group (a set of alterations is considered "linked" to the first group if this group is over-represented amongst the samples that have at least an alteration of this set)."
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.3)
 LinkingTo: Rcpp
