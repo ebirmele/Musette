@@ -4,7 +4,7 @@
 #' functions of package \link{musette}
 #' 
 #' 
-#' @param matrix A logical matrix, with mandatory row and column names ! Row
+#' @param matrix A logical matrix, with mandatory row and column names! Row
 #' names must correspond to alterations, and column names must correspond to
 #' samples.
 #' @return An named list of character vectors. Its names are the alterations'
