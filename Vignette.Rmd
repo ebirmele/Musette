@@ -12,11 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Installation
 
 
-To install Musette, load the package as a zip file at https://git.mi.parisdescartes.fr/ebirmele/Musette
-and install it locally
+It is possible to install Musette from the GitHub repository using the devtools package.
 
 ```{r, eval=FALSE}
-install.packages("./Musette-master.zip", repos=NULL,type="source")
+library(devtools)
+install_github("ebirmele/Musette")
 ```
 
 It can now be loaded for use
