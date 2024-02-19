@@ -21,7 +21,7 @@ install.packages("./Musette-master.zip", repos=NULL,type="source")
 
 It can now be loaded for use
 
-```{r}
+```{r,message=FALSE}
 library(musette)
 ```
 
@@ -70,10 +70,10 @@ In order to be able to get back to the original alterations, a list is created f
 
 A tree of solutions (sets of alterations) is generated from a root which is the empty set. Every other solution $S$ is the child of a solution $S'$ having one less alteration. The child $S$ is constructed and generated only if its score $c(S)$ is significantly better than its parents'. This is evaluated by computing a 'step score', which can be defined as : 
 \begin{itemize}
-\item *original* mode : the probability of getting a better score than $c(S)$ by adding a random alteration to $S'$. 
-\item *best-first* mode : the probability of getting a better score than $c(S)$ by replacing the 'worst' alteration in $S$ by a random alteration (here 'worst' is in terms of the score of the individual alteration) 
-\item *strict* mode : the highest of the $p_i$, where $p_i$ is the probability of getting a better score than $c(S)$ by replacing alteration number $i$ in $S$ by a random alteration. The solution $S$ is added to the tree only if this step-score is below a certain threshold.  The tree of solutions is grown by gradually raising this threshold.
-
+\item original mode: the probability of getting a better score than $c(S)$ by adding a random alteration to $S'$. 
+\item best-first mode: the probability of getting a better score than $c(S)$ by replacing the 'worst' alteration in $S$ by a random alteration (here 'worst' is in terms of the score of the individual alteration) 
+\item strict mode: the highest of the $p_i$, where $p_i$ is the probability of getting a better score than $c(S)$ by replacing alteration number $i$ in $S$ by a random alteration. The solution $S$ is added to the tree only if this step-score is below a certain threshold.  The tree of solutions is grown by gradually raising this threshold.
+\end{itemize}
 
  
 ### Outcome
@@ -146,9 +146,9 @@ color_distance=5000000
 
 ### musette algorithm
 
-The main algorithm can now be run
+The main algorithm can now be run. The messages given by the code are printed here to show the preprocessing steps, and the evolution of the step-score with the corresponding number of solutions. In this exemple, the stopping criterion is the discovery of the best $100$ solutions.
 
-```{r}
+```{r,message=FALSE}
 ll=do.musette(matrices=matrices, reds=reds, blind_domination_step = blind_domination_step,
               color_domination_step = color_domination_step, blind_distance=blind_distance, 
               color_distance=color_distance, blind_percent=blind_percent, red_percent=red_percent, 
@@ -176,12 +176,21 @@ The solution array lists the explored alteration sets with the following items f
 - its sensitivity and specificity to discriminate red samples
 - the list of all alterations, including those hidden behind the selected ones
 
+```{r}
+head(solutions)
+```
+
+
+
 The alterations array lists all aterations with the following items:
 
 - the alterations hidden behind them or the alterations it is hidden behind
 - the pathways it belongs to 
 - its full name (*longname*), chromosome and position 
 
+```{r}
+head(alterations)
+```
 
 ### Post-treatment
 
@@ -197,18 +206,27 @@ g <- influenceGraph(ll,20,TRUE)
 visIgraph(g)
 ```
 
-The plot is not drawn here as the interactive format of visIgraph plots is not compatible 
+As the interactive plot cannot be drawn in the pdf document, let us plot the influence graph as a basic igraph object:
+
+
+```{r}
+g <- influenceGraph(ll,20,TRUE)
+plot(g)
+```
+
+
+
 
 Other useful plots are the oncoplots generated with the *oncoPrint* function of the *ComplexHeatmap* package. Each such plot corresponds to a solution set and gives a readable summary of the considered alterations and the red and blue samples hit by each alteration.
 
-The following code shows such plots fro the $3$ best solutions in terms od score.
+The following code shows such plots for the $3$ best solutions in terms of score.
 
 ```{r, message=FALSE}
 indices <- rownames(solutions)[1:3]
 ```
 
 
-```{r, message=FALSE}
+```{r, message=FALSE,warning=FALSE}
 for (index in indices){
    solution.oncomatrix(ll,index,reds)
 }  
@@ -222,8 +240,13 @@ with one line per (solution,pathway) couple for which the pathway appears at lea
 
 ```{r}
 spdf = sharedPathways(solutions,alterations)
-View(spdf)
+#View(spdf)
 ```
+
+```{r}
+head(spdf)
+```
+
 
 
 ## Export in csv files
@@ -234,7 +257,7 @@ which is not compatible with the *write.csv* function. To obtain correctly files
 ```{r,eval=FALSE}
 # Data export to csv files
 csv_sol=musette2csv(sol)
-write.csv(csv_sol,file="mysolutions.csv")
+#write.csv(csv_sol,file="mysolutions.csv")
 ```
 
 
